@@ -2,10 +2,10 @@
 
 # Inter-Repository Merge Script (IRM-Script)
 # Author: Kaan Keskin
-# Co-Authors:
+# Co-Authors: Semih Teker
 # Creation Date: 25 August 2020 
-# Modification Date: 3 June 2021
-# Release: 1.6.3
+# Modification Date: 3 December 2021
+# Release: 1.12.3
 
 HELP_MSG=(
 ""
@@ -40,6 +40,7 @@ HELP_MSG=(
 "   -d : Download option set. Defined repositories will be cloned to the local disk in the repositories folder. "
 "   -h : Shows this Help message. "
 "   -m : Merge option set. In the upload operation, cloned repositories will be merged to develop branches of the remote repositories then pushed to the custom-created branches. "
+"   -r : Release Candidate Branch option set. Creates new Release Candidate Branch from develop branch. Download and Upload operations included in this option. "
 "   -u : Upload option set. Cloned repositories will be uploaded to remote repositories with new branch names formatted as IRM-SCRIPT-CODEMERGE-date. "
 "   -y : Yes to all for errors option set. Given errors will be neglected and the process will continue. "
 ""
@@ -65,19 +66,22 @@ HELP_MSG=(
 "   $ bash irm.sh -um github "
 "   $ bash irm.sh -u github "
 "   ----------------------------------------------------- "
+"   $ bash irm.sh -y -r rc-0.23.0 github"
+"   $ bash irm.sh -r rc-0.23.0 github"
+"   ----------------------------------------------------- "
 "   $ bash irm.sh -h "
 "   $ bash irm.sh -c "
 ""
 )
 
-#Script Starting Path
+# Script Starting Path
 START_PATH="$(pwd)"
 SCRIPT_NAME="Inter-Repository Merge Script"
 
-#Script Start Time
+# Script Start Time
 SCRIPT_START_TIME=$(date +%Y_%m_%d_%H_%M_%S)
 
-#Created Folders and Files
+# Created Folders and Files
 OUTPUT_FOLDER="$START_PATH//outputs"
 ARCHIVE_FOLDER="$OUTPUT_FOLDER//archives"
 REPOSITORY_FOLDER="$OUTPUT_FOLDER//repositories"
@@ -85,11 +89,11 @@ LOG_FOLDER="$OUTPUT_FOLDER//logs"
 LOG_FILE="$LOG_FOLDER//log.txt"
 MERGE_LOG_FOLDER="$LOG_FOLDER//merges"
 
-#Script Configuration Files
+# Script Configuration Files
 CONFIGURATION_FOLDER="$START_PATH//conf"
 REPO_ADDR_FILE="$CONFIGURATION_FOLDER//repository.list.config"
 
-#Script Functions
+# Script Functions
 seperator_line() {
     echo "----------------------------------------------------------------------------------" | tee -a $LOG_FILE
 }
@@ -145,25 +149,25 @@ custom_exit() {
     fi
 }
 
-#Output Folder Operations
+# Output Folder Operations
 if [ -d $OUTPUT_FOLDER ]; then
     echo "Output folder exists: $OUTPUT_FOLDER"
 else
-    #New Output Folder Created
+    # New Output Folder Created
     mkdir "$OUTPUT_FOLDER" || exit
     echo "Output folder created: $OUTPUT_FOLDER"
 fi
 
-#Log Folder Operations
+# Log Folder Operations
 if [ -d $LOG_FOLDER ]; then
     echo "Log folder exists: $LOG_FOLDER"
 else
-    #New Log Folder Created
+    # New Log Folder Created
     mkdir "$LOG_FOLDER" || exit
     echo "Log folder created: $LOG_FOLDER"
 fi
 
-#Log File Operations
+# Log File Operations
 if [ -s $LOG_FILE ]; then
     echo "Log file exists: $LOG_FILE"
 else
@@ -171,27 +175,28 @@ else
     echo "Log file created: $LOG_FILE"
 fi
 
-#Merge Log Folder Operations
+# Merge Log Folder Operations
 if [ -d $MERGE_LOG_FOLDER ]; then
     echo "Merge Log folder exists: $MERGE_LOG_FOLDER"
 else
-    #New Merge Log Folder Created
+    # New Merge Log Folder Created
     mkdir "$MERGE_LOG_FOLDER" || exit
     echo "Merge Log folder created: $MERGE_LOG_FOLDER"
 fi
 
-#Script Start Date
+# Script Start Date
 custom_msg "$SCRIPT_NAME Starting [$(date --rfc-3339=seconds)]"
 custom_msg "Script starting path: $START_PATH"
 
-#Script Options and Parameters
+# Script Options and Parameters
 archive_flag=0
 branch_flag=0
-yes_flag=0
 download_flag=0
-upload_flag=0
 merge_flag=0
-while getopts :ab:cdhmuy opt; do
+release_branch_flag=0
+upload_flag=0
+yes_flag=0
+while getopts :ab:cdhmr:uy opt; do
     case "$opt" in   
     a) 
         custom_msg "Found the -a (archive) option."
@@ -217,8 +222,9 @@ while getopts :ab:cdhmuy opt; do
         custom_msg "Found the -d (download) option."
         custom_msg "Download option set. Defined repositories will be clone to local repository folders."
         download_flag=1
-        if [ $upload_flag -eq 1 ] || [ $merge_flag -eq 1 ]; then
+        if [ $upload_flag -eq 1 ] || [ $merge_flag -eq 1 ] || [ $release_branch_flag -eq 1 ]; then
             custom_err "You can not download/archive and upload/merge at the same time."
+            custom_err "You can not use Release Candidate option with Upload and Download operations."
             exit 1
         fi
         ;;
@@ -229,19 +235,30 @@ while getopts :ab:cdhmuy opt; do
         ;;
     m)
         custom_msg "Found the -m (merge) option."
-        custom_msg "Merge option set. Uploaded remote repositories will be merged with develp branch."
+        custom_msg "Merge option set. Uploaded remote repositories will be merged with develop branch."
         merge_flag=1
         if [ $download_flag -eq 1 ] || [ $archive_flag -eq 1 ]; then
             custom_err "You can not download/archive and upload/merge at the same time."
             exit 1
         fi
         ;;
+    r)
+        custom_msg "Found -r (release candidate branch) option."
+        custom_msg "Creates new Release Candidate Branch from develop branch."
+        if [ $branch_flag -eq 1 ] || [ $download_flag -eq 1 ] || [ $upload_flag -eq 1 ] || [ $merge_flag -eq 1 ]; then
+            custom_err "You can not use Release Candidate option with Upload and Download operations."
+            exit 1
+        fi
+        CUSTOM_BRANCH_NAME=$OPTARG
+        release_branch_flag=1
+        ;;
     u)
         custom_msg "Found the -u (upload) option."
         custom_msg "Upload option set. Downloaded repositories will be uploaded to remote repositories with new branch names formatted as IRM-SCRIPT-CODEMERGE-date."
         upload_flag=1
-        if [ $download_flag -eq 1 ] || [ $archive_flag -eq 1 ]; then
+        if [ $download_flag -eq 1 ] || [ $archive_flag -eq 1 ] || [ $release_branch_flag -eq 1 ]; then
             custom_err "You can not download/archive and upload/merge at the same time."
+            custom_err "You can not use Release Candidate option with Upload and Download operations."
             exit 1
         fi
         ;;
@@ -275,11 +292,11 @@ for param in "$@"; do
 done
 seperator_line
 
-#Current Working Directory
+# Current Working Directory
 custom_msg "Current working directory: $START_PATH"
 seperator_line
 
-#Reading Repository Configuration
+# Reading Repository Configuration
 if [ -s $CONFIG_FILE ]; then
     source $CONFIG_FILE
     custom_msg "Configuration file ($CONFIG_FILE) found and not empty."
@@ -291,7 +308,8 @@ if [ -s $CONFIG_FILE ]; then
         exit 1
     fi
     if [ -n $CUSTOM_BRANCH_NAME ]; then
-        GIT_UPLOAD_BRANCH = $CUSTOM_BRANCH_NAME
+        GIT_UPLOAD_BRANCH=$CUSTOM_BRANCH_NAME
+        custom_msg "Git Upload Branch: $GIT_UPLOAD_BRANCH"
     fi
 else
     custom_err "Configuration file ($CONFIG_FILE) not found or empty."
@@ -299,10 +317,10 @@ else
 fi
 seperator_line
 
-#Repository Folder Preprocess Operations
+# Repository Folder Preprocess Operations
 if [ -d $REPOSITORY_FOLDER ]; then
     custom_msg "Repositories folder exists: $REPOSITORY_FOLDER"
-    if [ $download_flag -eq 1 ]; then
+    if [ $download_flag -eq 1 ] || [ $release_branch_flag -eq 1 ]; then
         custom_err "Download operation can not be performed. Please check the options (-d or -u) and restart the script."
         custom_err "Repositories folder must be deleted to perform download operation. To remove repositories folder use -c option."
         exit 1
@@ -312,8 +330,8 @@ else
         custom_err "Upload operation can not be performed. Please check the options (-d or -u) and restart the script."
         custom_err "Repositories folder must be available to perform upload operation. Firstly, you must download repositories."
         exit 1
-    elif [ $download_flag -eq 1 ]; then
-        #New Repository Folder Created
+    elif [ $download_flag -eq 1 ] || [ $release_branch_flag -eq 1 ]; then
+        # New Repository Folder Created
         mkdir "$REPOSITORY_FOLDER" || exit
         custom_msg "New repository folder created: $REPOSITORY_FOLDER"
     fi
@@ -321,7 +339,7 @@ fi
 seperator_line
 cd "$REPOSITORY_FOLDER" || exit
 
-#Archive Folder Operations
+# Archive Folder Operations
 if [ $archive_flag -eq 1 ]; then
     if [ -d $ARCHIVE_FOLDER ]; then
         custom_msg "Archive folder exists: $REPOSITORY_FOLDER"
@@ -332,7 +350,7 @@ if [ $archive_flag -eq 1 ]; then
         fi
     else
         if [ $download_flag -eq 1 ]; then
-            #New Archive Folder Created
+            # New Archive Folder Created
             mkdir "$ARCHIVE_FOLDER" || exit
             custom_msg "New Archive folder created: $ARCHIVE_FOLDER"
         fi
@@ -340,20 +358,22 @@ if [ $archive_flag -eq 1 ]; then
 fi
 seperator_line
 
-#Installed Software Versions
+# Installed Software Versions
 custom_msg "Installed Software Versions"
 custom_msg "Git Version:"
 git --version | tee -a $LOG_FILE || exit
 
-#Git User Initialization
-git config --global user.name "[IRM-SCRIPT]"
-git config --global user.email "irm.script@aselsan.com.tr"
+# Git User Information Fetch and IRM Script Modification
+GIT_USER_NAME="$(git config --local --get user.name)"
+GIT_USER_EMAIL="$(git config --local --get user.email)"
+git config --local user.name "[IRM-SCRIPT]"
+git config --local user.email "irm.script@company.com.tr"
 
-#Inter Field Seperator (IFS) Modification
+# Inter Field Seperator (IFS) Modification
 IFS_OLD="$IFS"
 IFS=$'\n\r'
 
-#Repository Addresses
+# Repository Addresses
 if [ -s $REPO_ADDR_FILE ]; then
     for repo_add in $(cat $REPO_ADDR_FILE); do
         if [ -n "$repo_add" ]; then
@@ -362,7 +382,7 @@ if [ -s $REPO_ADDR_FILE ]; then
                 temp_repository_name="$repo_add"
                 cd "$REPOSITORY_FOLDER" || exit
                 git clone "$MAIN_GIT_REPO_ADDR$temp_repository_name" | tee -a $LOG_FILE
-                #Entering repository folder
+                # Entering repository folder
                 cd "$REPOSITORY_FOLDER//$temp_repository_name" || custom_exit
                 custom_msg "Current Working Folder: $(pwd)"
                 git remote -v | tee -a $LOG_FILE
@@ -371,7 +391,7 @@ if [ -s $REPO_ADDR_FILE ]; then
                 git fetch --all | tee -a $LOG_FILE
                 git branch --all | tee -a $LOG_FILE
                 git describe --all | tee -a $LOG_FILE
-                #Exiting repository folder
+                # Exiting repository folder
                 cd ..
                 custom_msg "Git process completed for: $temp_repository_name"
                 if [ $archive_flag -eq 1 ]; then
@@ -384,7 +404,7 @@ if [ -s $REPO_ADDR_FILE ]; then
                 custom_msg "Processing repository name: $repo_add"
                 temp_repository_name="$repo_add"
                 cd "$REPOSITORY_FOLDER" || exit
-                #Entering repository folder
+                # Entering repository folder
                 cd "$REPOSITORY_FOLDER//$temp_repository_name" || custom_exit
                 custom_msg "Current Working Folder: $(pwd)"
                 git remote -v | tee -a $LOG_FILE
@@ -406,6 +426,27 @@ if [ -s $REPO_ADDR_FILE ]; then
                 else
                     git push --set-upstream origin "IRM-SCRIPT-CODEMERGE-$SCRIPT_START_TIME" | tee -a $LOG_FILE
                 fi
+                # Exiting repository folder
+                cd ..
+                seperator_line
+            fi
+            if [ $release_branch_flag -eq 1 ]; then
+                custom_msg "Processing repository name: $repo_add"
+                temp_repository_name="$repo_add"
+                cd "$REPOSITORY_FOLDER" || exit
+                git clone "$MAIN_GIT_REPO_ADDR$temp_repository_name" | tee -a $LOG_FILE
+                # Entering repository folder
+                cd "$REPOSITORY_FOLDER//$temp_repository_name" || custom_exit
+                custom_msg "Current Working Folder: $(pwd)"
+                git remote -v | tee -a $LOG_FILE
+                git checkout "$GIT_UPLOAD_BRANCH" | tee -a $LOG_FILE
+                git pull --all | tee -a $LOG_FILE
+                git fetch --all | tee -a $LOG_FILE
+                git branch --all | tee -a $LOG_FILE
+                git describe --all | tee -a $LOG_FILE
+                git push --set-upstream origin "$GIT_UPLOAD_BRANCH" | tee -a $LOG_FILE
+                # Exiting repository folder
+                cd ..
                 seperator_line
             fi
         fi
@@ -415,8 +456,12 @@ else
     exit 1
 fi
 
-#Inter Field Seperator (IFS) Modification
+# Git User Information Modification
+git config --local user.name "$GIT_USER_NAME"
+git config --local user.email "$GIT_USER_EMAIL"
+
+# Inter Field Seperator (IFS) Modification
 IFS="$IFS_OLD"
 
-#Main Folder Return
+# Main Folder Return
 cd "$START_PATH"

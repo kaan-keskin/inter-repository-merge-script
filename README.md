@@ -32,6 +32,7 @@ Options:
 -d : Download option set. Defined repositories will be cloned to the local disk in the repositories folder.
 -h : Shows this Help message.
 -m : Merge option set. In the upload operation, cloned repositories will be merged to develop branches of the remote repositories then pushed to the custom-created branches.
+-r : Release Candidate Branch option set. Creates new Release Candidate Branch from develop branch. Download and Upload operations included in this option.
 -u : Upload option set. Cloned repositories will be uploaded to remote repositories with new branch names formatted as IRM-SCRIPT-CODEMERGE-date.
 -y : Yes to all for errors option set. Given errors will be neglected and the process will continue.
 ```
@@ -49,7 +50,7 @@ repository-2 : Internet/Intranet Repository 2 configuration files will be used.
 ```
 
 Example Usages: 
-```bash
+```Shell
 bash irm.sh -yda github
 bash irm.sh -yd github
 bash irm.sh -da github
@@ -61,6 +62,9 @@ bash irm.sh -yu github
 bash irm.sh -um -b code_merge github
 bash irm.sh -um github
 bash irm.sh -u github
+---------------------------
+bash irm.sh -y -r rc-0.23.0 github
+bash irm.sh -r rc-0.23.0 github
 ---------------------------
 bash irm.sh -h
 bash irm.sh -c
