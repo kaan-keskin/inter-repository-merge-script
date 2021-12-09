@@ -81,6 +81,11 @@ SCRIPT_NAME="Inter-Repository Merge Script"
 # Script Start Time
 SCRIPT_START_TIME=$(date +%Y_%m_%d_%H_%M_%S)
 
+# Git User Information Fetch
+git_user_modification_flag=0
+GIT_USER_NAME="$(git config --global --get user.name)"
+GIT_USER_EMAIL="$(git config --global --get user.email)"
+
 # Created Folders and Files
 OUTPUT_FOLDER="$START_PATH//outputs"
 ARCHIVE_FOLDER="$OUTPUT_FOLDER//archives"
@@ -96,6 +101,14 @@ REPO_ADDR_FILE="$CONFIGURATION_FOLDER//repository.list.config"
 # Script Functions
 seperator_line() {
     echo "----------------------------------------------------------------------------------" | tee -a $LOG_FILE
+}
+
+git_user_information_return() {
+    if [ $git_user_modification_flag -eg 1 ]; then
+        # Git User Information Modification
+        git config --global user.name "$GIT_USER_NAME"
+        git config --global user.email "$GIT_USER_EMAIL"
+    fi
 }
 
 custom_msg() {
@@ -136,10 +149,12 @@ custom_exit() {
             ;;
         N | n | No | no | NO)
             echo "[$(date +%H:%M:%S)] [EXIT]    OK, goodbye!" | tee -a $LOG_FILE
+            git_user_information_return
             exit
             ;;
         *)
             custom_err "Unknown option: $opt."
+            git_user_information_return
             exit 1
             ;;
         esac
@@ -363,11 +378,10 @@ custom_msg "Installed Software Versions"
 custom_msg "Git Version:"
 git --version | tee -a $LOG_FILE || exit
 
-# Git User Information Fetch and IRM Script Modification
-GIT_USER_NAME="$(git config --global --get user.name)"
-GIT_USER_EMAIL="$(git config --global --get user.email)"
+# Git User Information IRM Script Modification
 git config --global user.name "[IRM-SCRIPT]"
 git config --global user.email "irm.script@company.com.tr"
+git_user_modification_flag=1
 
 # Inter Field Seperator (IFS) Modification
 IFS_OLD="$IFS"
@@ -457,8 +471,7 @@ else
 fi
 
 # Git User Information Modification
-git config --global user.name "$GIT_USER_NAME"
-git config --global user.email "$GIT_USER_EMAIL"
+git_user_information_return
 
 # Inter Field Seperator (IFS) Modification
 IFS="$IFS_OLD"
