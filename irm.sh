@@ -104,7 +104,7 @@ seperator_line() {
 }
 
 git_user_information_return() {
-    if [ $git_user_modification_flag -eg 1 ]; then
+    if [ $git_user_modification_flag -eq 1 ]; then
         # Git User Information Modification
         git config --global user.name "$GIT_USER_NAME"
         git config --global user.email "$GIT_USER_EMAIL"
