@@ -364,10 +364,10 @@ custom_msg "Git Version:"
 git --version | tee -a $LOG_FILE || exit
 
 # Git User Information Fetch and IRM Script Modification
-GIT_USER_NAME="$(git config --get user.name)"
-GIT_USER_EMAIL="$(git config --get user.email)"
-git config user.name "[IRM-SCRIPT]"
-git config user.email "irm.script@company.com.tr"
+GIT_USER_NAME="$(git config --global --get user.name)"
+GIT_USER_EMAIL="$(git config --global --get user.email)"
+git config --global user.name "[IRM-SCRIPT]"
+git config --global user.email "irm.script@company.com.tr"
 
 # Inter Field Seperator (IFS) Modification
 IFS_OLD="$IFS"
@@ -457,8 +457,8 @@ else
 fi
 
 # Git User Information Modification
-git config user.name "$GIT_USER_NAME"
-git config user.email "$GIT_USER_EMAIL"
+git config --global user.name "$GIT_USER_NAME"
+git config --global user.email "$GIT_USER_EMAIL"
 
 # Inter Field Seperator (IFS) Modification
 IFS="$IFS_OLD"
